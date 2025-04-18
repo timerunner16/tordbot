@@ -100,17 +100,14 @@ void bot_commands::question_frombtn(const dpp::button_click_t& event, std::strin
 	std::string raw_json = r.text;
 	auto j = json::parse(raw_json);
 	if (bot != nullptr) {
-		dpp::message message;
-		bool recieved = false;
-		bot->message_get(event.command.message_id, event.command.get_channel().id, [&message, &recieved](const dpp::confirmation_callback_t& callback) {
+		bot->message_get(event.command.message_id, event.command.channel_id, [](const dpp::confirmation_callback_t& callback) {
 			if (callback.is_error()) {std::cout << callback.get_error().message << std::endl; return;}
-			message = std::get<dpp::message>(callback.value);
-			recieved = true;
-		});
-		while (!recieved) {}
-		message.components.clear();
-		bot->message_edit(message);
+			dpp::message message = callback.get<dpp::message>();
 
+			message.components.clear();
+			bot->message_edit(message);
+		});
+		
 		event.reply(create_message(j["question"], category, rating, category_use, rating_use, event.command.usr, event.command.get_channel().id));
 	} else {
 		event.reply(create_message(j["question"], category, rating, category_use, rating_use, event.command.usr, event.command.get_channel().id));
