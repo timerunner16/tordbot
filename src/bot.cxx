@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <map>
 #include <cpr/cpr.h>
 #include <nlohmann/json.hpp>
 #include "bot.hpp"
@@ -9,6 +10,25 @@ const std::string ratings[2] = {PG, PG13};
 
 dpp::cluster* bot_commands::bot = nullptr;
 
+std::map<std::string, std::string> filters({
+	std::make_pair("kiss ", "hug "),
+	std::make_pair("kissed ", "hugged "),
+	std::make_pair("kissing ", "hugging "),
+	std::make_pair("Kiss ", "Hug "),
+	std::make_pair("Kissed ", "Hugged "),
+	std::make_pair("Kissing ", "Hugging "),
+});
+
+std::string filter_text(std::string input, std::string original, std::string replacement) {
+	size_t pos = input.find(original);
+	std::cout << input << " " << pos << std::endl;
+	while (pos != input.npos) {
+		input.replace(pos, pos+original.length(), replacement);
+		pos = input.find(original);
+	}
+	return input;
+}
+
 dpp::message create_message(std::string question, std::string category, std::string rating, std::string category_use, std::string rating_use, dpp::user user, dpp::snowflake channel_id) {
 	std::string author = "Requested by " + user.username;
 	std::string author_avatar = user.get_avatar_url();
@@ -18,9 +38,14 @@ dpp::message create_message(std::string question, std::string category, std::str
 	std::transform(rating_formatted.begin(), rating_formatted.end(), rating_formatted.begin(), ::toupper);
 	std::string footer = "Category: " + category_formatted + " | Rating: " + rating_formatted;
 
+	std::string question_filtered = question;
+	for (auto& [key, val] : filters) {
+		question_filtered = filter_text(question_filtered, key, val);
+	}
+
 	dpp::embed embed = dpp::embed()
 		.set_color(0x5534EFFF)
-		.set_title(question)
+		.set_title(question_filtered)
 		.set_author(author, "", author_avatar)
 		.set_footer(footer, "");
 	dpp::message message = dpp::message(channel_id, embed);
