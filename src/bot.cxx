@@ -21,9 +21,9 @@ std::map<std::string, std::string> filters({
 
 std::string filter_text(std::string input, std::string original, std::string replacement) {
 	size_t pos = input.find(original);
-	std::cout << input << " " << pos << std::endl;
+	std::cout << input << " " << pos << " " << original.length() << std::endl;
 	while (pos != input.npos) {
-		input.replace(pos, pos+original.length(), replacement);
+		input.replace(pos, original.length(), replacement);
 		pos = input.find(original);
 	}
 	return input;
