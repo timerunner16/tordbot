@@ -9,6 +9,7 @@ const std::string categories[5] = {TRUTH, DARE, WYR, NHIE, PARANOIA};
 const std::string ratings[2] = {PG, PG13};
 
 dpp::cluster* bot_commands::bot = nullptr;
+std::vector<std::string> bot_commands::recent_ids = std::vector<std::string>();
 
 std::map<std::string, std::string> filters({
 	std::make_pair("kiss ", "hug "),
@@ -21,12 +22,36 @@ std::map<std::string, std::string> filters({
 
 std::string filter_text(std::string input, std::string original, std::string replacement) {
 	size_t pos = input.find(original);
-	std::cout << input << " " << pos << " " << original.length() << std::endl;
 	while (pos != input.npos) {
 		input.replace(pos, original.length(), replacement);
 		pos = input.find(original);
 	}
 	return input;
+}
+
+std::string bot_commands::get_question(std::string category, std::string rating) {
+	bool success = false;
+	json j;
+	int count = 0;
+	while (!success) {
+		cpr::Response r = cpr::Get(cpr::Url{"https://api.truthordarebot.xyz/v1/" + category},
+							   cpr::Parameters{{RATING_PARAM,rating}});
+		if (r.status_code != 200) {}
+
+		std::string raw_json = r.text;
+		j = json::parse(raw_json);
+		std::string id = j["id"];
+		bool found = false;
+		for (auto i : recent_ids) {
+			found = found || i == id;
+		}
+		if (!found || ++count == 5) success = true;
+	}
+
+	recent_ids.insert(recent_ids.begin(), j["id"]);
+	if (recent_ids.size() > RECENT_IDS_SIZE) recent_ids.pop_back();
+	std::cout<<recent_ids.size()<<std::endl;
+	return j["question"];
 }
 
 dpp::message create_message(std::string question, std::string category, std::string rating, std::string category_use, std::string rating_use, dpp::user user, dpp::snowflake channel_id) {
@@ -88,20 +113,9 @@ void bot_commands::question(const dpp::slashcommand_t& event) {
 	if (category == RANDOM) category_use = categories[rand()%(sizeof(categories)/sizeof(std::string))];
 	if (rating == RANDOM) rating_use = ratings[rand()%(sizeof(ratings)/sizeof(std::string))];
 
-	cpr::Response r = cpr::Get(cpr::Url{"https://api.truthordarebot.xyz/v1/" + category_use},
-							   cpr::Parameters{{RATING_PARAM,rating_use}});
-	if (r.status_code != 200) {
-		event.reply(
-				"Couldn't get data from truthordarebot API.\n**Status code:** " +
-				std::to_string(r.status_code) +
-				"\n**Error:** " + 
-				r.error.message);
-		return;
-	}
+	std::string question = get_question(category_use, rating_use);
 
-	std::string raw_json = r.text;
-	auto j = json::parse(raw_json);
-	event.reply(create_message(j["question"], category, rating, category_use, rating_use, event.command.usr, event.command.get_channel().id));
+	event.reply(create_message(question, category, rating, category_use, rating_use, event.command.usr, event.command.get_channel().id));
 }
 
 void bot_commands::question_frombtn(const dpp::button_click_t& event, std::string rating, std::string category) {
@@ -111,19 +125,8 @@ void bot_commands::question_frombtn(const dpp::button_click_t& event, std::strin
 	if (category == RANDOM) category_use = categories[rand()%(sizeof(categories)/sizeof(std::string))];
 	if (rating == RANDOM) rating_use = ratings[rand()%(sizeof(ratings)/sizeof(std::string))];
 
-	cpr::Response r = cpr::Get(cpr::Url{"https://api.truthordarebot.xyz/v1/" + category_use},
-							   cpr::Parameters{{RATING_PARAM,rating_use}});
-	if (r.status_code != 200) {
-		event.reply(
-				"Couldn't get data from truthordarebot API.\n**Status code:** " +
-				std::to_string(r.status_code) +
-				"\n**Error:** " + 
-				r.error.message);
-		return;
-	}
+	std::string question = get_question(category_use, rating_use);
 
-	std::string raw_json = r.text;
-	auto j = json::parse(raw_json);
 	if (bot != nullptr) {
 		bot->message_get(event.command.message_id, event.command.channel_id, [](const dpp::confirmation_callback_t& callback) {
 			if (callback.is_error()) {std::cout << callback.get_error().message << std::endl; return;}
@@ -133,8 +136,8 @@ void bot_commands::question_frombtn(const dpp::button_click_t& event, std::strin
 			bot->message_edit(message);
 		});
 		
-		event.reply(create_message(j["question"], category, rating, category_use, rating_use, event.command.usr, event.command.get_channel().id));
+		event.reply(create_message(question, category, rating, category_use, rating_use, event.command.usr, event.command.get_channel().id));
 	} else {
-		event.reply(create_message(j["question"], category, rating, category_use, rating_use, event.command.usr, event.command.get_channel().id));
+		event.reply(create_message(question, category, rating, category_use, rating_use, event.command.usr, event.command.get_channel().id));
 	}
 }
