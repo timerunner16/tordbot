@@ -12,19 +12,29 @@ dpp::cluster* bot_commands::bot = nullptr;
 std::vector<std::string> bot_commands::recent_ids = std::vector<std::string>();
 
 std::map<std::string, std::string> filters({
-	std::make_pair("kiss ", "hug "),
-	std::make_pair("kissed ", "hugged "),
-	std::make_pair("kissing ", "hugging "),
-	std::make_pair("Kiss ", "Hug "),
-	std::make_pair("Kissed ", "Hugged "),
-	std::make_pair("Kissing ", "Hugging "),
+	std::make_pair("kiss", "hug"),
+	std::make_pair("kissing", "hugging"),
+	std::make_pair("kissed", "hugged"),
 });
 
-std::string filter_text(std::string input, std::string original, std::string replacement) {
-	size_t pos = input.find(original);
-	while (pos != input.npos) {
-		input.replace(pos, original.length(), replacement);
-		pos = input.find(original);
+std::string lower(std::string input) {
+	std::string result = input;
+	std::transform(result.begin(), result.end(), result.begin(), ::tolower);
+	return result;
+}
+
+std::string filter_text(std::string input) {
+	for (auto& [original, replacement] : filters) {
+		size_t pos = lower(input).find(lower(original));
+		while (pos != input.npos) {
+			char following = input[pos+original.length()];
+			if (following == ' ' || following == '?' || following == '.' || following == '\'' || following == '"') {
+				bool capitalized = std::isupper(input[pos]);
+				input.replace(pos, original.length(), lower(replacement));
+				if (capitalized) input[pos] = std::toupper(input[pos]);
+			}
+			pos = input.find(original, pos+1);
+		}
 	}
 	return input;
 }
@@ -50,7 +60,6 @@ std::string bot_commands::get_question(std::string category, std::string rating)
 
 	recent_ids.insert(recent_ids.begin(), j["id"]);
 	if (recent_ids.size() > RECENT_IDS_SIZE) recent_ids.pop_back();
-	std::cout<<recent_ids.size()<<std::endl;
 	return j["question"];
 }
 
@@ -64,9 +73,7 @@ dpp::message create_message(std::string question, std::string category, std::str
 	std::string footer = "Category: " + category_formatted + " | Rating: " + rating_formatted;
 
 	std::string question_filtered = question;
-	for (auto& [key, val] : filters) {
-		question_filtered = filter_text(question_filtered, key, val);
-	}
+	question_filtered = filter_text(question_filtered);
 
 	dpp::embed embed = dpp::embed()
 		.set_color(0x5534EFFF)
