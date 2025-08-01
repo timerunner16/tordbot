@@ -52,6 +52,9 @@ int main() {
 	bot->on_ready([&bot](const dpp::ready_t& event) {
 		if (dpp::run_once<struct register_bot_commands>()) {
 			dpp::slashcommand ping_command(PING, "Pong!", bot->me.id);
+			ping_command.set_interaction_contexts({
+				dpp::itc_guild, dpp::itc_bot_dm, dpp::itc_private_channel
+			});
 			dpp::slashcommand question_command(QUESTION, "Ask a new question.", bot->me.id);
 			question_command.add_option(
 				dpp::command_option(dpp::co_string, CATEGORY_PARAM, "Category for the new question.", false)
@@ -69,6 +72,9 @@ int main() {
 					.add_choice(dpp::command_option_choice("R", std::string(R)))
 					.add_choice(dpp::command_option_choice("Random", std::string(RANDOM)))
 			);
+			question_command.set_interaction_contexts({
+				dpp::itc_guild, dpp::itc_bot_dm, dpp::itc_private_channel
+			});
 
 			bot->global_command_create(ping_command);
 			bot->global_command_create(question_command);

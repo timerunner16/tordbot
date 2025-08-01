@@ -81,19 +81,27 @@ dpp::message create_message(std::string question, std::string category, std::str
 		.set_author(author, "", author_avatar)
 		.set_footer(footer, "");
 	dpp::message message = dpp::message(channel_id, embed);
-	message.add_component(
-		dpp::component().add_component(
-			dpp::component()
-				.set_label("New Question")
-				.set_type(dpp::cot_button)
-				.set_style(dpp::cos_primary)
-				.set_id(std::string(QUESTION)+";"+rating+";"+category)
-	));
+	if (channel_id != dpp::snowflake()) {
+		message.add_component(
+			dpp::component().add_component(
+				dpp::component()
+					.set_label("New Question")
+					.set_type(dpp::cot_button)
+					.set_style(dpp::cos_primary)
+					.set_id(std::string(QUESTION)+";"+rating+";"+category)
+		));
+	}
 	return message;
 }
 
 void bot_commands::ping(const dpp::slashcommand_t& event) {
-	event.reply("Howdy!");
+	dpp::embed embed = dpp::embed()
+		.set_color(0xE0B92BFF)
+		.set_title("Howdy!")
+		.set_author(event.command.usr.username, "", event.command.usr.get_avatar_url())
+		.set_footer(":]", "");
+	dpp::message message = dpp::message(embed);
+	event.reply(message);
 }
 
 void bot_commands::question(const dpp::slashcommand_t& event) {
@@ -121,8 +129,9 @@ void bot_commands::question(const dpp::slashcommand_t& event) {
 	if (rating == RANDOM) rating_use = ratings[rand()%(sizeof(ratings)/sizeof(std::string))];
 
 	std::string question = get_question(category_use, rating_use);
-
-	event.reply(create_message(question, category, rating, category_use, rating_use, event.command.usr, event.command.get_channel().id));
+	dpp::snowflake channel_id = dpp::snowflake();
+	if (event.command.is_guild_interaction()) channel_id = event.command.get_channel().id;
+	event.reply(create_message(question, category, rating, category_use, rating_use, event.command.usr, channel_id));
 }
 
 void bot_commands::question_frombtn(const dpp::button_click_t& event, std::string rating, std::string category) {
