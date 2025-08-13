@@ -20,11 +20,21 @@ std::map<std::string, std::string> filters({
 
 std::vector<std::string> confession_footers({
 	"Ye'v been naughty.",
-	"Crikey",
-	"Confession time.",
-	"eeee",
+	"Bloody hell, mate...",
+	"What the hell, man?",
+	"What is wrong with you?!",
 	"Oooooooh!",
 	dpp::unicode_emoji::fearful_face,
+	dpp::unicode_emoji::exploding_head,
+	"Jesus Christ...",
+	"3:",
+	":c",
+	"I feel unsafe here.",
+	"I'm calling the cops!",
+	"AAAAAAAAHHHH!",
+	"You freaky git...",
+	"Booooooo!",
+	"Get off the stage!"
 });
 
 std::string lower(std::string input) {
