@@ -3,6 +3,8 @@
 #include <vector>
 
 #define PING "ping"
+
+
 #define QUESTION "question"
 
 #define CATEGORY_PARAM "category"
@@ -22,6 +24,11 @@
 
 #define RECENT_IDS_SIZE 100
 
+
+#define CONFESS "confess"
+
+#define CONFESSION_PARAM "confession"
+
 struct question_t {
 	std::string question;
 	std::string category;
@@ -33,6 +40,7 @@ class bot_commands {
 		static void ping(const dpp::slashcommand_t& event);
 		static void question(const dpp::slashcommand_t& event);
 		static void question_frombtn(const dpp::button_click_t& event, std::string rating, std::string category);
+		static void confess(const dpp::slashcommand_t& event);
 		static dpp::cluster* bot;
 	private:
 		static std::string get_question(std::string category, std::string rating);

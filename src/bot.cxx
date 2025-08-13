@@ -3,6 +3,7 @@
 #include <cpr/cpr.h>
 #include <nlohmann/json.hpp>
 #include "bot.hpp"
+#include "dpp/unicode_emoji.h"
 using json=nlohmann::json;
 
 const std::string categories[5] = {TRUTH, DARE, WYR, NHIE, PARANOIA};
@@ -15,6 +16,15 @@ std::map<std::string, std::string> filters({
 	std::make_pair("kiss", "hug"),
 	std::make_pair("kissing", "hugging"),
 	std::make_pair("kissed", "hugged"),
+});
+
+std::vector<std::string> confession_footers({
+	"Ye'v been naughty.",
+	"Crikey",
+	"Confession time.",
+	"eeee",
+	"Oooooooh!",
+	dpp::unicode_emoji::fearful_face,
 });
 
 std::string lower(std::string input) {
@@ -156,4 +166,25 @@ void bot_commands::question_frombtn(const dpp::button_click_t& event, std::strin
 	} else {
 		event.reply(create_message(question, category, rating, category_use, rating_use, event.command.usr, event.command.get_channel().id));
 	}
+}
+
+void bot_commands::confess(const dpp::slashcommand_t &event) {
+	event.reply(dpp::message("Got your confession, I'll be exposing you momentarily.").set_flags(dpp::m_ephemeral));
+	dpp::snowflake channel_id = event.command.channel_id;
+
+	std::string confession;
+	try {
+		confession = std::get<std::string>(event.get_parameter(CONFESSION_PARAM));
+	} catch (const std::bad_variant_access& e) {
+		confession = "balls";
+	}
+
+	dpp::embed embed = dpp::embed()
+		.set_color(0xB86A60FF)
+		.set_title("Confession")
+		.set_description(confession)
+		.set_footer("\"" + confession_footers[rand()%confession_footers.size()] + "\"", "");
+	
+	dpp::message message = dpp::message(channel_id, embed);
+	bot->message_create(message);
 }

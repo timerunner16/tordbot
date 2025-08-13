@@ -35,6 +35,7 @@ int main() {
 		switch (hashstr(event.command.get_command_name().c_str())) {
 			case hashstr(PING): {bot_commands::ping(event); break;}
 			case hashstr(QUESTION): {bot_commands::question(event); break;}
+			case hashstr(CONFESS): {bot_commands::confess(event); break;}
 		}
 	});
 
@@ -55,6 +56,7 @@ int main() {
 			ping_command.set_interaction_contexts({
 				dpp::itc_guild, dpp::itc_bot_dm, dpp::itc_private_channel
 			});
+
 			dpp::slashcommand question_command(QUESTION, "Ask a new question.", bot->me.id);
 			question_command.add_option(
 				dpp::command_option(dpp::co_string, CATEGORY_PARAM, "Category for the new question.", false)
@@ -76,8 +78,12 @@ int main() {
 				dpp::itc_guild, dpp::itc_bot_dm, dpp::itc_private_channel
 			});
 
+			dpp::slashcommand confess_command(CONFESS, "Make an anonymous confession.", bot->me.id);
+			confess_command.add_option(dpp::command_option(dpp::co_string, CONFESSION_PARAM, "The confession to send.", true));
+
 			bot->global_command_create(ping_command);
 			bot->global_command_create(question_command);
+			bot->global_command_create(confess_command);
 		}
 	});
 
