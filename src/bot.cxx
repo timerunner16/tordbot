@@ -11,6 +11,7 @@ const std::string categories[5] = {TRUTH, DARE, WYR, NHIE, PARANOIA};
 const std::string ratings[2] = {PG, PG13};
 
 dpp::cluster* bot_commands::bot = nullptr;
+sqlite3* bot_commands::sqlite3_con = nullptr;
 std::vector<std::string> bot_commands::recent_ids = std::vector<std::string>();
 
 std::map<std::string, std::string> filters({
@@ -276,8 +277,12 @@ void bot_commands::question_frombtn(const dpp::button_click_t& event, std::strin
 }
 
 void bot_commands::confess(const dpp::slashcommand_t &event) {
-	event.reply(dpp::message("Got your confession, I'll be exposing you momentarily.").set_flags(dpp::m_ephemeral));
-	dpp::snowflake channel_id = event.command.channel_id;
+	dpp::snowflake channel_id = get_confession_channel(event.command.guild_id);
+	if (!channel_id.empty()) event.reply(dpp::message("Got your confession, I'll be exposing you momentarily.").set_flags(dpp::m_ephemeral));
+	else {
+		event.reply(dpp::message("A confession channel hasn't been set in this server.").set_flags(dpp::m_ephemeral));
+		return;
+	}
 
 	std::string confession;
 	try {
@@ -302,4 +307,76 @@ void bot_commands::confess(const dpp::slashcommand_t &event) {
 	
 	dpp::message message = dpp::message(channel_id, embed);
 	bot->message_create(message);
+}
+
+void bot_commands::prepare_settings_db() {
+	sqlite3_open("./tord_settings.sqlite3", &sqlite3_con);
+	sqlite3_exec(sqlite3_con, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr);
+	sqlite3_exec(sqlite3_con, "CREATE TABLE IF NOT EXISTS settings(GuildID VARCHAR(20), ConfessionChannelID VARCHAR(20));", nullptr, nullptr, nullptr);
+	sqlite3_exec(sqlite3_con, "END TRANSACTION;", nullptr, nullptr, nullptr);
+}
+
+void bot_commands::close_settings_db() {
+	sqlite3_close(sqlite3_con);
+
+	sqlite3_con = nullptr;
+}
+
+bool bot_commands::guild_exists(dpp::snowflake guild_id) {
+	if (sqlite3_con == nullptr) return false;
+
+	bool found = false;
+
+	std::string sql = "SELECT GuildID FROM settings WHERE GuildID = " + guild_id.str() + ";";
+	auto callback = [](void* found, int colc, char**, char**) -> int {
+		*(bool*)found = colc > 0;
+		return 0;
+	};
+	sqlite3_exec(sqlite3_con, sql.c_str(), callback, &found, nullptr);
+	return found;
+}
+
+void bot_commands::set_confession_channel_internal(dpp::snowflake guild_id, dpp::snowflake channel_id) {
+	if (sqlite3_con == nullptr) return;
+
+	bool exists = guild_exists(guild_id);
+
+	sqlite3_exec(sqlite3_con, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr);
+	
+	std::string sql = "";
+
+	if (exists) sql = "UPDATE OR ABORT SET ConfessionChannelID = " + channel_id.str() + " FROM settings WHERE GuildID = " + guild_id.str() + ";";
+	else sql = "INSERT INTO settings VALUES (" + guild_id.str() + ", " + channel_id.str() + " );";
+
+	sqlite3_exec(sqlite3_con, sql.c_str(), nullptr, nullptr, nullptr);
+	sqlite3_exec(sqlite3_con, "END TRANSACTION;", nullptr, nullptr, nullptr);
+}
+
+dpp::snowflake bot_commands::get_confession_channel(dpp::snowflake guild_id) {
+	if (sqlite3_con == nullptr) return dpp::snowflake();
+	
+	dpp::snowflake channel_id = dpp::snowflake();
+	std::string sql = "SELECT ConfessionChannelID FROM settings WHERE GuildID = " + guild_id.str() + ";";
+	std::string channel_id_str = "";
+	auto callback = [](void* str, int colc, char** values, char**) -> int {
+		if (colc > 0) *(std::string*)str = std::string(values[0]);
+		return 0;
+	};
+	sqlite3_exec(sqlite3_con, sql.c_str(), callback, &channel_id_str, nullptr);
+	return dpp::snowflake(channel_id_str);
+}
+
+void bot_commands::set_confession_channel(const dpp::slashcommand_t &event) {
+	dpp::channel c = event.command.get_channel();
+	if (c.get_user_permissions(&event.command.usr).can(dpp::p_manage_channels)) {
+		set_confession_channel_internal(event.command.guild_id, event.command.channel_id);
+		dpp::embed embed = dpp::embed()
+			.set_color(0xDDE339FF)
+			.set_title("Setting Change")
+			.set_description("Set this channel (" + c.name + ") to be the active confession channel.")
+			.set_footer("Change made by " + event.command.usr.username, event.command.usr.get_avatar_url());
+		event.reply(embed);
+	} else {
+		event.reply(dpp::message("You don't have permission to run this command; you need the Manage Channels permission.").set_flags(dpp::m_ephemeral));
+	}
 }

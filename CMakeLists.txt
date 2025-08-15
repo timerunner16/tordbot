@@ -18,6 +18,9 @@ find_package(DPP REQUIRED)
 target_link_libraries(tordbot PRIVATE ${DPP_LIBRARIES})
 target_include_directories(tordbot PRIVATE ${DPP_INCLUDE_DIR})
 
+find_package(SQLite3 REQUIRED)
+target_link_libraries(tordbot PRIVATE SQLite::SQLite3)
+
 include(FetchContent)
 FetchContent_Declare(
 	cpr GIT_REPOSITORY https://github.com/libcpr/cpr.git

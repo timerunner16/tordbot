@@ -13,6 +13,8 @@ int main() {
 	srand(time(NULL));
 	env.load_dotenv();
 
+	bot_commands::prepare_settings_db();
+
 	dpp::cluster* bot = new dpp::cluster(std::getenv("BOT_TOKEN"));
 
 	bot->on_log(dpp::utility::cout_logger());
@@ -24,6 +26,7 @@ int main() {
 			case hashstr(PING): {bot_commands::ping(event); break;}
 			case hashstr(QUESTION): {bot_commands::question(event); break;}
 			case hashstr(CONFESS): {bot_commands::confess(event); break;}
+			case hashstr(SET_CONFESSION_CHANNEL): {bot_commands::set_confession_channel(event); break;}
 		}
 	});
 
@@ -69,16 +72,21 @@ int main() {
 			dpp::slashcommand confess_command(CONFESS, "Make an anonymous confession.", bot->me.id);
 			confess_command.add_option(dpp::command_option(dpp::co_string, CONFESSION_PARAM, "The confession to send.", true));
 			confess_command.add_option(dpp::command_option(dpp::co_boolean, PIRATIZE_PARAM, "Hide speech patterns by converting to pirate speak.", true));
+
+			dpp::slashcommand confession_channel_command(SET_CONFESSION_CHANNEL, "Set the channel for confessions to be sent in.", bot->me.id);
 			
 			bot->global_bulk_command_create({
 				ping_command,
 				question_command,
 				confess_command,
+				confession_channel_command,
 			});
 		}
 	});
 
 	bot->start(dpp::st_wait);
+
+	bot_commands::close_settings_db();
 
 	return 0;
 }
