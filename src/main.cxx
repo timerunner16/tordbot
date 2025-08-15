@@ -3,26 +3,14 @@
 #include <vector>
 #include "bot.hpp"
 #include "dotenv.h"
+#include "util.hpp"
 using namespace dotenv;
 std::string TOKEN;
 
 constexpr unsigned int hashstr(const char* str, int h = 0) {return !str[h] ? 5381 : (hashstr(str, h+1) * 33) ^ str[h];}
 
-std::vector<std::string> split_string(std::string input, std::string delimiter) {
-	std::vector<std::string> output = std::vector<std::string>();
-	std::string remaining_string = input;
-	int pos = remaining_string.find(delimiter);
-	while (pos != std::string::npos) {
-		std::string current = remaining_string.substr(0, pos);
-		output.push_back(current);
-		remaining_string.erase(0,pos+delimiter.size());
-		pos = remaining_string.find(delimiter);
-	}
-	output.push_back(remaining_string);
-	return output;
-}
-
 int main() {
+	srand(time(NULL));
 	env.load_dotenv();
 
 	dpp::cluster* bot = new dpp::cluster(std::getenv("BOT_TOKEN"));
@@ -41,7 +29,7 @@ int main() {
 
 	bot->on_button_click([](const dpp::button_click_t& event) {
 		std::string data = event.custom_id;
-		auto data_split = split_string(data, ";");
+		auto data_split = string_utils::split_string(data, ";");
 		std::string cmd = data_split[0];
 		if (cmd == QUESTION) {
 			std::string rating = data_split[1];
@@ -80,10 +68,13 @@ int main() {
 
 			dpp::slashcommand confess_command(CONFESS, "Make an anonymous confession.", bot->me.id);
 			confess_command.add_option(dpp::command_option(dpp::co_string, CONFESSION_PARAM, "The confession to send.", true));
-
-			bot->global_command_create(ping_command);
-			bot->global_command_create(question_command);
-			bot->global_command_create(confess_command);
+			confess_command.add_option(dpp::command_option(dpp::co_boolean, PIRATIZE_PARAM, "Hide speech patterns by converting to pirate speak.", true));
+			
+			bot->global_bulk_command_create({
+				ping_command,
+				question_command,
+				confess_command,
+			});
 		}
 	});
 

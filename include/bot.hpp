@@ -28,6 +28,7 @@
 #define CONFESS "confess"
 
 #define CONFESSION_PARAM "confession"
+#define PIRATIZE_PARAM "piratize"
 
 struct question_t {
 	std::string question;

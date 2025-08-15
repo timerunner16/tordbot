@@ -4,6 +4,7 @@
 #include <nlohmann/json.hpp>
 #include "bot.hpp"
 #include "dpp/unicode_emoji.h"
+#include "util.hpp"
 using json=nlohmann::json;
 
 const std::string categories[5] = {TRUTH, DARE, WYR, NHIE, PARANOIA};
@@ -37,6 +38,85 @@ std::vector<std::string> confession_footers({
 	"Get off the stage!"
 });
 
+std::map<std::string, std::string> piracy({
+	std::make_pair("hello", "ahoy"),
+	std::make_pair("hey", "ahoy"),
+	std::make_pair("greetings", "ahoy"),
+	std::make_pair("yes", "aye"),
+	std::make_pair("no", "nay"),
+	std::make_pair("omg", "blimey"),
+	std::make_pair("friend", "bucko"),
+	std::make_pair("friends", "shipmates"),
+	std::make_pair("money", "booty"),
+	std::make_pair("cash", "booty"),
+	std::make_pair("awful", "bilge-sucking"),
+	std::make_pair("song", "shanty"),
+	std::make_pair("songs", "shanties"),
+	std::make_pair("sword", "cutlass"),
+	std::make_pair("swords", "cutlasses"),
+	std::make_pair("gun", "cannon"),
+	std::make_pair("guns", "cannons"),
+	std::make_pair("pistol", "flintlock"),
+	std::make_pair("died", "visited davy jones' locker"),
+	std::make_pair("dies", "visits davy jones' locker"),
+	std::make_pair("die", "visit davy jones' locker"),
+	std::make_pair("dying", "visiting davy jones' locker"),
+	std::make_pair("coin", "doubloon"),
+	std::make_pair("coins", "doubloons"),
+	std::make_pair("alcohol", "grog"),
+	std::make_pair("drink", "grog"),
+	std::make_pair("drinks", "grog"),
+	std::make_pair("kitchen", "galley"),
+	std::make_pair("kitchens", "gallies"),
+	std::make_pair("bathroom", "head"),
+	std::make_pair("bathrooms", "heads"),
+	std::make_pair("restroom", "head"),
+	std::make_pair("restrooms", "heads"),
+	std::make_pair("stop","heave to"),
+	std::make_pair("stops","heaves to"),
+	std::make_pair("stopping","heaving to"),
+	std::make_pair("stopped","heaved to"),
+	std::make_pair("kid", "youngin"),
+	std::make_pair("kids", "youngins"),
+	std::make_pair("boy", "lad"),
+	std::make_pair("boys", "lads"),
+	std::make_pair("guy", "lad"),
+	std::make_pair("guys", "lads"),
+	std::make_pair("girl", "lass"),
+	std::make_pair("girl", "lasses"),
+	std::make_pair("my", "me"),
+	std::make_pair("am", "be"),
+	std::make_pair("im", "i be"),
+	std::make_pair("i'm", "i be"),
+	std::make_pair("is", "be"),
+	std::make_pair("everybody", "crew"),
+	std::make_pair("everyone", "crew"),
+	std::make_pair("telescope", "spyglass"),
+	std::make_pair("drunk", "squiffy"),
+	std::make_pair("intoxicated", "squiffy"),
+	std::make_pair("nap", "caulk"),
+	std::make_pair("woman", "wench"),
+	std::make_pair("man", "dandy"),
+	std::make_pair("you", "ye"),
+	std::make_pair("yippee", "yo-ho-ho"),
+	std::make_pair("yay", "arrrgh"),
+	std::make_pair("wow", "blow me down"),
+	std::make_pair("maybe", "mayhaps"),
+	std::make_pair("classmate", "hand"),
+	std::make_pair("classmates", "hands"),
+	std::make_pair("ok", "savvy"),
+	std::make_pair("steal", "pirate"),
+	std::make_pair("steals", "pirates"),
+	std::make_pair("stealing", "pirating"),
+	std::make_pair("stole", "pirated"),
+	std::make_pair("sailor", "tar"),
+	std::make_pair("sailors", "tars"),
+	std::make_pair("citizen", "landlubber"),
+	std::make_pair("citizens", "landlubbers"),
+	std::make_pair("pedestrian", "landlubber"),
+	std::make_pair("pedestrians", "landlubbers"),
+});
+
 std::string lower(std::string input) {
 	std::string result = input;
 	std::transform(result.begin(), result.end(), result.begin(), ::tolower);
@@ -57,6 +137,23 @@ std::string filter_text(std::string input) {
 		}
 	}
 	return input;
+}
+
+std::string pirate_media(std::string media) {
+	std::vector<std::string> tokens = string_utils::tokenize_string(media, "\r\n\t ,,.<>?!()[]{}-_=+\\|;:\"@#$%^&*`~");
+	for (size_t i = 0; i < tokens.size(); i++) {
+		std::string lower_media = tokens[i];
+		std::transform(lower_media.begin(), lower_media.end(), lower_media.begin(),
+			[](unsigned char c){ return std::tolower(c); });
+		if (piracy.find(lower_media) != piracy.end()) {
+			tokens[i] = piracy[lower_media];
+		} else tokens[i] = lower_media;
+	}
+
+	std::string result;
+	for (std::string i : tokens) result += i;
+
+	return result;
 }
 
 std::string bot_commands::get_question(std::string category, std::string rating) {
@@ -189,6 +286,14 @@ void bot_commands::confess(const dpp::slashcommand_t &event) {
 		confession = "balls";
 	}
 
+	bool piratize;
+	try {
+		piratize = std::get<bool>(event.get_parameter(PIRATIZE_PARAM));
+	} catch (const std::bad_variant_access& e) {
+		piratize = true;
+	}
+
+	if (piratize) confession = pirate_media(confession);
 	dpp::embed embed = dpp::embed()
 		.set_color(0xB86A60FF)
 		.set_title("Confession")
