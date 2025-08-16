@@ -304,7 +304,9 @@ void bot_commands::confess(const dpp::slashcommand_t &event) {
 		.set_title("Confession")
 		.set_description(confession)
 		.set_footer("\"" + confession_footers[rand()%confession_footers.size()] + "\"", "");
-	
+
+	std::this_thread::sleep_for(std::chrono::seconds(30+rand()%60));
+
 	dpp::message message = dpp::message(channel_id, embed);
 	bot->message_create(message);
 }
